@@ -14,10 +14,16 @@ class PostSeeder extends Seeder
      */
     public function run(): void
     {
+        // Check for MAX_USER_SEED in env first, then fallback to config
+        $max_seed = env('MAX_POST_SEED');
+        if ($max_seed == null) {
+            $max_seed = config('seeder.max_post_seed');;
+        }
+
         $users = User::all();
         $categories = Category::all();
 
-        Post::factory(env('MAX_POST_SEED'))
+        Post::factory($max_seed)
             ->make()
             ->each(function ($post) use ($users, $categories) {
                 $user = $users->random();

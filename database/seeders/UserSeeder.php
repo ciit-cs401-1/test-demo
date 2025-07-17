@@ -14,8 +14,14 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
+        // Check for MAX_USER_SEED in env first, then fallback to config
+        $max_seed = env('MAX_USER_SEED');
+        if ($max_seed == null) {
+            $max_seed = config('seeder.max_user_seed');;
+        }
+
         // Create users first
-        $users = User::factory(env('MAX_USER_SEED'))->create();
+        $users = User::factory($max_seed)->create();
 
         // Get the roles
         $adminRole = Role::where('role_name', 'A')->first();

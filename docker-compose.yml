@@ -1,73 +1,106 @@
+# Define the services (containers) that make up your application
 services:
-    # PHP-FPM service (using the image built from your Dockerfile)
+    # Laravel application service
     app:
+        # Build the image from the Dockerfile in the current directory
         build:
             context: .
             dockerfile: Dockerfile
-        #image: game-ako-chronicles-blog:latest # Use the image name you built
-        container_name: gac_app
+
+        # Container name for easy identification
+        container_name: gac-app
+
+        # Restart policy - always restart if container stops
         restart: unless-stopped
+
+        # Working directory inside the container
+        working_dir: /var/www/html
+
+        # Mount volumes for persistent data and development
         volumes:
-            - storage:/usr/share/nginx/html/storage:rw
-            - public:/usr/share/nginx/html/public:rw
-            # - .:/var/www # Mount your project directory for development (optional for production)
-            # - /var/www/vendor # Keep vendor outside the bind mount to avoid host permissions issues
-            # - ./docker-entrypoint.sh:/usr/local/bin/docker-entrypoint.sh # Mount the custom entrypoint
-        # Specify the custom entrypoint script.
-        # This will be executed when the container starts.
-        #entrypoint: ["docker-entrypoint.sh"]
-        ports:
-            - "9000:9000" # Expose PHP-FPM port (not directly accessed by browser)
+            # Mount your local code directory to the container
+            # This allows real-time code changes during development
+            - .:/var/www/html
+
+            # Mount storage directory for persistent file uploads and logs
+            - storage_data:/var/www/html/storage
+
+        # Network configuration
+        networks:
+            - gac-network
+
+        # Environment variables for the Laravel application
         environment:
-            # Set your Laravel environment variables here
-            # IMPORTANT: For production, use Azure App Service environment settings or Key Vault
-            APP_ENV: production
-            APP_DEBUG: "false"
-            APP_URL: http://localhost
-            DB_CONNECTION: mysql
-            DB_HOST: db # This matches the service name of your MySQL container
-            DB_PORT: 3306
-            DB_DATABASE: ${DB_DATABASE}
-            DB_USERNAME: ${DB_USERNAME}
-            DB_PASSWORD: ${DB_PASSWORD}
-        # env_file:
-        #     - .env
+            # Database connection settings (should match your .env file)
+            - DB_HOST=db
+            - DB_PORT=3306
+            - DB_DATABASE=${DB_DATABASE}
+            - DB_USERNAME=${DB_USERNAME}
+            - DB_PASSWORD=${DB_PASSWORD}
+
+            # Application environment
+            - APP_ENV=production
+            - APP_DEBUG=false
+            - APP_URL=http://localhost
+
+        # Service dependencies - wait for database to be ready
         depends_on:
             - db
 
-    # Nginx web server
-    nginx:
-        image: nginx:alpine
-        container_name: gac_nginx
-        restart: unless-stopped
+        # Port mapping - map container port 80 to host port 8080
         ports:
-            - "80:80" # Expose port 80 for web access
-            # - "443:443" # https
-        volumes:
-            #- .:/var/www # Mount your project directory
-            #- ./nginx.conf:/etc/nginx/templates/default.conf.template
-            - ./nginx.conf:/etc/nginx/conf.d/default.conf # Mount your custom Nginx config
-            - storage:/usr/share/nginx/html/storage:rw
-            - public:/usr/share/nginx/html/public:ro
-        depends_on:
-            - app # Nginx depends on the PHP-FPM app service
+            - "8080:80"
 
-    # MySQL database
+    # MySQL database service
     db:
-        image: mysql:8.4 # Using MySQL 8.4 as requested
-        container_name: gac_db
+        # Use official MySQL 8.4 image
+        image: mysql:8.4
+
+        # Container name for easy identification
+        container_name: gac-db
+
+        # Restart policy
         restart: unless-stopped
-        ports:
-            - "3306:3306" # Expose MySQL port (optional, for local access)
+
+        # Environment variables for MySQL configuration
         environment:
+            # Root password for MySQL (use a strong password in production)
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+
+            # Database name to create automatically
             MYSQL_DATABASE: ${DB_DATABASE}
+
+            # User credentials for Laravel application
             MYSQL_USER: ${DB_USERNAME}
             MYSQL_PASSWORD: ${DB_PASSWORD}
-            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD} # Set a strong root password
-        volumes:
-            - dbdata:/var/lib/mysql # Persist database data
 
+        # Mount volumes for persistent database data
+        volumes:
+            # Persist MySQL data across container restarts
+            - mysql_data:/var/lib/mysql
+
+            # Custom MySQL configuration (optional)
+            # - ./mysql-config:/etc/mysql/conf.d
+
+        # Port mapping - expose MySQL port for external access if needed
+        ports:
+            - "3306:3306"
+
+        # Network configuration
+        networks:
+            - gac-network
+
+# Define named volumes for persistent data
 volumes:
-    dbdata: # Named volume for MySQL data persistence
-    storage:
-    public:
+    # MySQL data persistence
+    mysql_data:
+        driver: local
+
+    # Laravel storage persistence
+    storage_data:
+        driver: local
+
+# Define custom network for service communication
+networks:
+    gac-network:
+        driver: bridge

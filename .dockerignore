@@ -1,0 +1,6 @@
+vendor
+node_modules
+public/storage
+.gitignore
+.gitattributes
+files-env
