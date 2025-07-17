@@ -14,14 +14,17 @@ class PostSeeder extends Seeder
      */
     public function run(): void
     {
+
         $users = User::all();
         $categories = Category::all();
 
         Post::factory(env('MAX_POST_SEED'))
             ->make()
             ->each(function ($post) use ($users, $categories) {
-                $user = $users->random();
-                $post->user_id = $user->id;
+                $user = $users->count() ? $users->random() : null;
+                if ($user) {
+                    $post->user_id = $user->id;
+                }
                 $post->publication_date = fake()->optional()->dateTime();
                 if ($post->publication_date) {
                     $post->views_count = fake()->numberBetween(1, 50000);
@@ -33,10 +36,15 @@ class PostSeeder extends Seeder
 
                 // Handle the case where there are no categories.
                 if ($categoryCount > 0) {
-                    $randomCategories = $categories->random(rand(1, $numberOfCategoriesToSelect))
-                        ->pluck('id')->toArray();
+                    $randomCategories = $categories->random(rand(1, $numberOfCategoriesToSelect));
+                    // If only one category is returned, wrap in array
+                    if ($randomCategories instanceof \Illuminate\Database\Eloquent\Collection) {
+                        $randomCategories = $randomCategories->pluck('id')->toArray();
+                    } else {
+                        $randomCategories = [$randomCategories->id];
+                    }
                 } else {
-                    $randomCategories = []; //set empty if no categories found.
+                    $randomCategories = [];
                 }
                 $post->categories()->attach($randomCategories);
             });
