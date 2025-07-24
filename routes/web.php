@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\LandingPageController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\PostController;
 use Illuminate\Support\Facades\Route;
 
 // Guest routes (only accessible when not logged in)
@@ -19,4 +20,6 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::resource('roles', RoleController::class);
+    Route::get('/posts/create', [PostController::class, 'create'])->name('posts.create');
+    Route::post('/posts', [PostController::class, 'store']);
 });
